@@ -9,9 +9,11 @@ import { generateOtp, sendOtpViaApiTxt, OTP_TTL_MS } from "../lib/otp.js";
 const digitsOnly = (value = "") => String(value).replace(/\D/g, "");
 
 function setSessionCookie(res, token) {
-  const crossSite = process.env.COOKIE_SAME_SITE === "None";
-  const secure = process.env.NODE_ENV === "production" || crossSite;
-  const sameSite = crossSite ? "none" : "lax";
+  // Use sameSite: "none" and secure: true for production/cross-origin deployments (e.g. Vercel <-> Render)
+  const isLaxOnly = process.env.COOKIE_SAME_SITE === "Lax";
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER) || Boolean(process.env.VERCEL) || !isLaxOnly;
+  const sameSite = isProduction ? "none" : "lax";
+  const secure = isProduction;
 
   res.cookie("vastu_session", token, {
     httpOnly: true,
@@ -23,9 +25,10 @@ function setSessionCookie(res, token) {
 }
 
 function clearSessionCookie(res) {
-  const crossSite = process.env.COOKIE_SAME_SITE === "None";
-  const secure = process.env.NODE_ENV === "production" || crossSite;
-  const sameSite = crossSite ? "none" : "lax";
+  const isLaxOnly = process.env.COOKIE_SAME_SITE === "Lax";
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER) || Boolean(process.env.VERCEL) || !isLaxOnly;
+  const sameSite = isProduction ? "none" : "lax";
+  const secure = isProduction;
 
   res.clearCookie("vastu_session", {
     httpOnly: true,
@@ -84,12 +87,14 @@ export async function adminLogin(req, res) {
 
     return res.json({
       success: true,
+      token,
       data: {
         id: user._id,
         email: user.email,
         phone: user.phone,
         name: user.name,
         role: user.role,
+        token,
       },
     });
   } catch (e) {
@@ -484,10 +489,12 @@ export async function verifyOtp(req, res) {
 
     return res.json({
       success: true,
+      token,
       data: {
         id: String(user._id),
         phone: user.phone,
         role: user.role,
+        token,
       },
       redirectTo: user.role === "admin" ? "/admin" : "/",
     });
