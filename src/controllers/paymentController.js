@@ -671,7 +671,14 @@ export async function handlePayUResponse(req, res) {
     await connectDB();
     const data = req.body || {};
     const { txnid, status, udf1, udf2 } = data;
-    const frontendUrl = (process.env.CORS_ORIGIN || "http://localhost:3000").replace(/\/$/, "");
+    const getFrontendUrl = () => {
+      if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");
+      if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
+        return process.env.CORS_ORIGIN.split(",")[0].trim().replace(/\/$/, "");
+      }
+      return "https://vastu-user.vercel.app";
+    };
+    const frontendUrl = getFrontendUrl();
 
     console.log("Received PayU callback:", { txnid, status, udf1, udf2 });
 
@@ -796,7 +803,14 @@ export async function handlePayUResponse(req, res) {
     }
   } catch (error) {
     console.error("handlePayUResponse error:", error);
-    const frontendUrl = (process.env.CORS_ORIGIN || "http://localhost:3000").replace(/\/$/, "");
+    const getFrontendUrl = () => {
+      if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL.replace(/\/$/, "");
+      if (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*") {
+        return process.env.CORS_ORIGIN.split(",")[0].trim().replace(/\/$/, "");
+      }
+      return "https://vastu-user.vercel.app";
+    };
+    const frontendUrl = getFrontendUrl();
     return res.redirect(`${frontendUrl}/payment-failure?error=server_error`);
   }
 }

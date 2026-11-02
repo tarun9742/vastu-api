@@ -5,56 +5,34 @@ import apiRouter from "./routes/index.js";
 
 const app = express();
  
-const corsOrigins = (
-  process.env.CORS_ORIGIN ||
-  "http://localhost:3000,http://localhost:5173,https://vastu-user.vercel.app,https://vastu-admin-nine.vercel.app"
-)
-  .split(",")
-  .map((origin) => origin.trim().replace(/\/$/, ""))
-  .filter(Boolean);
+// Allow all origins unconditionally while preserving credentials compatibility
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Reflect any requesting origin (localhost, vercel, mobile, preview URLs, etc.)
+    callback(null, true);
+  },
+  credentials: true,
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Bootstrap-Key",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Set-Cookie"],
+};
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests without an Origin header (curl, Postman, etc.)
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      // Allow explicitly configured origins
-      if (corsOrigins.includes(origin.replace(/\/$/, ""))) {
-        return callback(null, true);
-      }
-
-      // Allow localhost and 127.0.0.1 on any port
-      if (
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-      ) {
-        return callback(null, true);
-      }
-
-      // Reject unapproved origins
-      return callback(new Error("Not allowed by CORS"));
-    },
-
-    credentials: true,
-
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
-
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Bootstrap-Key",
-    ],
-  })
-); 
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); 
 
 app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
@@ -84,6 +62,11 @@ app.use((req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
   res.status(err.status || 500).json({
     success: false,
     error: err.message || "Internal server error",
