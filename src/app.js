@@ -4,30 +4,57 @@ import cookieParser from "cookie-parser";
 import apiRouter from "./routes/index.js";
 
 const app = express();
-
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+ 
+const corsOrigins = (
+  process.env.CORS_ORIGIN ||
+  "http://localhost:3000,http://localhost:5173,https://vastu-user.vercel.app,https://vastu-admin-nine.vercel.app"
+)
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, postman)
-      if (!origin) return callback(null, true);
-
-      // Match configured CORS origin
-      if (origin === corsOrigin) return callback(null, true);
-
-      // In development or local testing, allow any localhost/127.0.0.1
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      // Allow requests without an Origin header (curl, Postman, etc.)
+      if (!origin) {
         return callback(null, true);
       }
 
-      return callback(null, false);
+      // Allow explicitly configured origins
+      if (corsOrigins.includes(origin.replace(/\/$/, ""))) {
+        return callback(null, true);
+      }
+
+      // Allow localhost and 127.0.0.1 on any port
+      if (
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      // Reject unapproved origins
+      return callback(new Error("Not allowed by CORS"));
     },
+
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Bootstrap-Key"],
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Bootstrap-Key",
+    ],
   })
-);
+); 
 
 app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
